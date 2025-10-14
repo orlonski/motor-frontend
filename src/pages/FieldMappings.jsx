@@ -32,6 +32,11 @@ function FieldMappings() {
   }, [endpointId])
 
   useEffect(() => {
+    // Garantir que mappings é um array antes de filtrar
+    if (!Array.isArray(mappings)) {
+      setFilteredMappings([])
+      return
+    }
     const filtered = mappings.filter((mapping) => {
       const matchesTab = mapping.direction === activeTab
       
@@ -64,9 +69,13 @@ function FieldMappings() {
     try {
       const response = await api.get(`/endpoints/${endpointId}/mappings`)
       console.log('Mappings data:', response.data)
-      setMappings(response.data)
+      // Garantir que sempre temos um array
+      const data = Array.isArray(response.data) ? response.data : []
+      setMappings(data)
     } catch (error) {
       console.error('Error fetching mappings:', error)
+      // Em caso de erro, definir array vazio
+      setMappings([])
     } finally {
       setLoading(false)
     }

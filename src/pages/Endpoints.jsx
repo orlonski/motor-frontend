@@ -34,6 +34,11 @@ function Endpoints() {
   }, [integrationId])
 
   useEffect(() => {
+    // Garantir que endpoints é um array antes de filtrar
+    if (!Array.isArray(endpoints)) {
+      setFilteredEndpoints([])
+      return
+    }
     const filtered = endpoints.filter(
       (endpoint) =>
         endpoint.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -54,10 +59,16 @@ function Endpoints() {
   const fetchEndpoints = async () => {
     try {
       const response = await api.get(`/integrations/${integrationId}/endpoints`)
-      setEndpoints(response.data)
-      setFilteredEndpoints(response.data)
+      console.log('Endpoints response:', response.data)
+      // Garantir que sempre temos um array
+      const data = Array.isArray(response.data) ? response.data : []
+      setEndpoints(data)
+      setFilteredEndpoints(data)
     } catch (error) {
       console.error('Error fetching endpoints:', error)
+      // Em caso de erro, definir arrays vazios
+      setEndpoints([])
+      setFilteredEndpoints([])
     } finally {
       setLoading(false)
     }

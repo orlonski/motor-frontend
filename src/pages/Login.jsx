@@ -16,11 +16,15 @@ function Login() {
     setError('')
     setLoading(true)
 
+    console.log('Submetendo formulário de login...')
     const result = await login(username, password)
+    console.log('Resultado do login:', result)
 
     if (result.success) {
+      console.log('Login bem-sucedido, navegando para /integrations')
       navigate('/integrations')
     } else {
+      console.log('Login falhou:', result.error)
       setError(result.error)
     }
 

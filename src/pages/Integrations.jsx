@@ -23,6 +23,11 @@ function Integrations() {
   }, [])
 
   useEffect(() => {
+    // Garantir que integrations é um array antes de filtrar
+    if (!Array.isArray(integrations)) {
+      setFilteredIntegrations([])
+      return
+    }
     const filtered = integrations.filter(
       (integration) =>
         integration.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -34,10 +39,23 @@ function Integrations() {
   const fetchIntegrations = async () => {
     try {
       const response = await api.get('/integrations')
-      setIntegrations(response.data)
-      setFilteredIntegrations(response.data)
+      console.log('Integrations response:', response.data)
+      console.log('Response type:', typeof response.data)
+      console.log('Is array?', Array.isArray(response.data))
+      // Garantir que sempre temos um array
+      const data = Array.isArray(response.data) ? response.data : []
+      if (!Array.isArray(response.data)) {
+        console.warn('API retornou dados não-array:', response.data)
+      }
+      setIntegrations(data)
+      setFilteredIntegrations(data)
     } catch (error) {
       console.error('Error fetching integrations:', error)
+      console.error('Error response:', error.response?.data)
+      console.error('Error status:', error.response?.status)
+      // Em caso de erro, definir arrays vazios
+      setIntegrations([])
+      setFilteredIntegrations([])
     } finally {
       setLoading(false)
     }
