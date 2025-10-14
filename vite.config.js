@@ -10,10 +10,11 @@ export default defineConfig({
       '/api': {
         target: 'https://swagger-motor-backend.zj8v6e.easypanel.host',
         changeOrigin: true,
+        rewrite: (path) => path
       }
-    },
-    preview: {
-      allowedHosts: ['*'],
     }
+  },
+  preview: {
+    port: 3000
   }
 })
