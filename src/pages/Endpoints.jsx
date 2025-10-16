@@ -26,12 +26,12 @@ function Endpoints() {
     headersTemplate: '',
     authentication_type: 'None',
   })
-  
+
   // Estados para teste de endpoint
   const [testingEndpointId, setTestingEndpointId] = useState(null)
   const [testResult, setTestResult] = useState(null)
   const [isTestResultModalOpen, setIsTestResultModalOpen] = useState(false)
-  
+
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -113,9 +113,7 @@ function Endpoints() {
         name: formData.name,
         httpMethod: formData.httpMethod,
         url: formData.url,
-        headersTemplate: formData.headersTemplate
-          ? JSON.parse(formData.headersTemplate)
-          : null,
+        headersTemplate: formData.headersTemplate ? JSON.parse(formData.headersTemplate) : null,
         authenticationType: formData.authentication_type,
         integrationId: integrationId,
       }
@@ -152,31 +150,31 @@ function Endpoints() {
   const handleTestEndpoint = async (endpoint) => {
     setTestingEndpointId(endpoint.id)
     setTestResult(null)
-    
+
     try {
       const response = await api.post(`/endpoints/${endpoint.id}/test`)
-      
+
       setTestResult({
         success: true,
         endpoint: endpoint,
         data: response.data,
         status: response.status,
-        statusText: response.statusText || 'OK'
+        statusText: response.statusText || 'OK',
       })
-      
+
       setIsTestResultModalOpen(true)
     } catch (error) {
       console.error('Error testing endpoint:', error)
-      
+
       setTestResult({
         success: false,
         endpoint: endpoint,
         error: error.response?.data?.message || error.message || 'Erro desconhecido',
         status: error.response?.status,
         statusText: error.response?.statusText,
-        details: error.response?.data
+        details: error.response?.data,
       })
-      
+
       setIsTestResultModalOpen(true)
     } finally {
       setTestingEndpointId(null)
@@ -201,11 +199,12 @@ function Endpoints() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Endpoints</h1>
-          {integration && (
-            <p className="text-gray-600 mt-1">Integração: {integration.name}</p>
-          )}
+          {integration && <p className="text-gray-600 mt-1">Integração: {integration.name}</p>}
         </div>
-        <button onClick={() => handleOpenModal()} className="btn btn-primary flex items-center space-x-2">
+        <button
+          onClick={() => handleOpenModal()}
+          className="btn btn-primary flex items-center space-x-2"
+        >
           <Plus className="h-5 w-5" />
           <span>Novo Endpoint</span>
         </button>
@@ -238,6 +237,9 @@ function Endpoints() {
                     Método
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Tipo request
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     URL
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -249,25 +251,40 @@ function Endpoints() {
                 {filteredEndpoints.map((endpoint) => (
                   <tr key={endpoint.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {endpoint.name}
-                      </div>
+                      <div className="text-sm font-medium text-gray-900">{endpoint.name}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                        endpoint.httpMethod === 'GET' ? 'bg-blue-100 text-blue-800' :
-                        endpoint.httpMethod === 'POST' ? 'bg-green-100 text-green-800' :
-                        endpoint.httpMethod === 'PUT' ? 'bg-yellow-100 text-yellow-800' :
-                        endpoint.httpMethod === 'PATCH' ? 'bg-purple-100 text-purple-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
+                      <span
+                        className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                          endpoint.httpMethod === 'GET'
+                            ? 'bg-blue-100 text-blue-800'
+                            : endpoint.httpMethod === 'POST'
+                            ? 'bg-green-100 text-green-800'
+                            : endpoint.httpMethod === 'PUT'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : endpoint.httpMethod === 'PATCH'
+                            ? 'bg-purple-100 text-purple-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}
+                      >
                         {endpoint.httpMethod}
                       </span>
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                          endpoint.requestType === 'SOAP'
+                            ? 'bg-blue-100 text-blue-800'
+                            : endpoint.requestType === 'REST'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}
+                      >
+                        {endpoint.requestType}
+                      </span>
+                    </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-gray-500 truncate max-w-md">
-                        {endpoint.url}
-                      </div>
+                      <div className="text-sm text-gray-500 truncate max-w-md">{endpoint.url}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex justify-end space-x-2">
@@ -284,7 +301,7 @@ function Endpoints() {
                             <Play className="h-5 w-5" />
                           )}
                         </button>
-                        
+
                         <button
                           onClick={() => navigate(`/endpoints/${endpoint.id}/mappings`)}
                           className="text-primary-600 hover:text-primary-900"
@@ -373,7 +390,10 @@ function Endpoints() {
           </div>
 
           <div>
-            <label htmlFor="authentication_type" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="authentication_type"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Tipo de Autenticação
             </label>
             <input
@@ -387,7 +407,10 @@ function Endpoints() {
           </div>
 
           <div>
-            <label htmlFor="headersTemplate" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="headersTemplate"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Headers (JSON)
             </label>
             <textarea
@@ -423,11 +446,13 @@ function Endpoints() {
         {testResult && (
           <div className="space-y-4">
             {/* Header com ícone de sucesso/erro */}
-            <div className={`flex items-start space-x-3 p-4 rounded-lg ${
-              testResult.success 
-                ? 'bg-green-50 border border-green-200' 
-                : 'bg-red-50 border border-red-200'
-            }`}>
+            <div
+              className={`flex items-start space-x-3 p-4 rounded-lg ${
+                testResult.success
+                  ? 'bg-green-50 border border-green-200'
+                  : 'bg-red-50 border border-red-200'
+              }`}
+            >
               <div className="flex-shrink-0">
                 {testResult.success ? (
                   <CheckCircle className="h-6 w-6 text-green-600" />
@@ -436,20 +461,24 @@ function Endpoints() {
                 )}
               </div>
               <div className="flex-1">
-                <h3 className={`text-sm font-medium ${
-                  testResult.success ? 'text-green-800' : 'text-red-800'
-                }`}>
+                <h3
+                  className={`text-sm font-medium ${
+                    testResult.success ? 'text-green-800' : 'text-red-800'
+                  }`}
+                >
                   {testResult.success ? 'Teste executado com sucesso!' : 'Erro ao executar teste'}
                 </h3>
-                <p className={`text-sm mt-1 ${
-                  testResult.success ? 'text-green-700' : 'text-red-700'
-                }`}>
+                <p
+                  className={`text-sm mt-1 ${
+                    testResult.success ? 'text-green-700' : 'text-red-700'
+                  }`}
+                >
                   Endpoint: <strong>{testResult.endpoint.name}</strong>
                 </p>
                 {testResult.status && (
-                  <p className={`text-sm ${
-                    testResult.success ? 'text-green-700' : 'text-red-700'
-                  }`}>
+                  <p
+                    className={`text-sm ${testResult.success ? 'text-green-700' : 'text-red-700'}`}
+                  >
                     Status: <strong>{testResult.status}</strong> - {testResult.statusText}
                   </p>
                 )}

@@ -1,119 +1,181 @@
-import { useState, useEffect } from 'react'
-import { useParams } from 'react-router-dom'
-import { Plus, Edit, Trash2 } from 'lucide-react'
-import api from '../services/api'
-import Modal from '../components/Modal'
-import SearchBar from '../components/SearchBar'
-import ConfirmDialog from '../components/ConfirmDialog'
-import LoadingSpinner from '../components/LoadingSpinner'
-import { useMappingValidator } from '../hooks/useMappingValidator'
-import ValidationAlert from '../components/ValidationAlert'
+import { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
+import { Plus, Edit, Trash2, AlertCircle, RefreshCw } from 'lucide-react';
+import api from '../services/api';
+import Modal from '../components/Modal';
+import SearchBar from '../components/SearchBar';
+import ConfirmDialog from '../components/ConfirmDialog';
+import LoadingSpinner from '../components/LoadingSpinner';
+import PathInput from '../components/PathInput';
+import { useStructureValidator } from '../hooks/useStructureValidator';
 
-const DIRECTIONS = ['request', 'response']
+const DIRECTIONS = ['request', 'response'];
 
 function FieldMappings() {
-  const { endpointId } = useParams()
-  const [endpoint, setEndpoint] = useState(null)
-  const [mappings, setMappings] = useState([])
-  const [filteredMappings, setFilteredMappings] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [activeTab, setActiveTab] = useState('request')
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
-  const [selectedMapping, setSelectedMapping] = useState(null)
+  const { endpointId } = useParams();
+  const [endpoint, setEndpoint] = useState(null);
+  const [mappings, setMappings] = useState([]);
+  const [filteredMappings, setFilteredMappings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState('request');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedMapping, setSelectedMapping] = useState(null);
   const [formData, setFormData] = useState({
     direction: 'request',
     source_path: '',
     target_path: '',
-  })
+  });
+  const [targetSuggestion, setTargetSuggestion] = useState(null);
+  const [targetSuggestionReason, setTargetSuggestionReason] = useState(null);
+  const [isDuplicate, setIsDuplicate] = useState(false);
+  const [isExampleModalOpen, setIsExampleModalOpen] = useState(false);
+
+  console.log('🎯 TOP OF COMPONENT - isExampleModalOpen:', isExampleModalOpen);
+
+  const handleOpenExampleModal = () => {
+    console.log('🔵 Abrindo modal de exemplo');
+    console.log('Structure:', structure);
+    setIsExampleModalOpen(true);
+  };
+
+  const handleCloseExampleModal = () => {
+    console.log('🔴 Fechando modal de exemplo');
+    console.trace('Stack trace de quem chamou close:'); // Mostra quem chamou
+    setIsExampleModalOpen(false);
+  };
+
+  // Hook de validação de estrutura
+  const {
+    structure,
+    loading: structureLoading,
+    error: structureError,
+    fetchStructure,
+    validatePath,
+    suggestTargetPath,
+    hasExample,
+  } = useStructureValidator(endpointId);
 
   useEffect(() => {
-    fetchEndpoint()
-    fetchMappings()
-  }, [endpointId])
+    fetchEndpoint();
+    fetchMappings();
+  }, [endpointId]);
 
   useEffect(() => {
-    // Garantir que mappings é um array antes de filtrar
     if (!Array.isArray(mappings)) {
-      setFilteredMappings([])
-      return
+      setFilteredMappings([]);
+      return;
     }
     const filtered = mappings.filter((mapping) => {
-      const matchesTab = mapping.direction === activeTab
+      const matchesTab = mapping.direction === activeTab;
 
       if (!searchTerm) {
-        return matchesTab
+        return matchesTab;
       }
 
-      const sourcePath = mapping.source_path || mapping.sourcePath || ''
-      const targetPath = mapping.target_path || mapping.targetPath || ''
+      const sourcePath = mapping.source_path || mapping.sourcePath || '';
+      const targetPath = mapping.target_path || mapping.targetPath || '';
 
       const matchesSearch =
         sourcePath.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        targetPath.toLowerCase().includes(searchTerm.toLowerCase())
+        targetPath.toLowerCase().includes(searchTerm.toLowerCase());
 
-      return matchesSearch && matchesTab
-    })
-    setFilteredMappings(filtered)
-  }, [searchTerm, mappings, activeTab])
+      return matchesSearch && matchesTab;
+    });
+    setFilteredMappings(filtered);
+  }, [searchTerm, mappings, activeTab]);
+
+  // Sugerir target path quando source path mudar
+  useEffect(() => {
+    const getSuggestion = async () => {
+      if (
+        formData.direction === 'response' &&
+        formData.source_path &&
+        !formData.target_path &&
+        hasExample
+      ) {
+        const suggestion = await suggestTargetPath(formData.source_path);
+        if (suggestion?.suggestion) {
+          setTargetSuggestion(suggestion.suggestion);
+          setTargetSuggestionReason(suggestion.reason);
+          setIsDuplicate(suggestion.reason === 'existing_mapping');
+        }
+      } else {
+        setTargetSuggestion(null);
+        setTargetSuggestionReason(null);
+        setIsDuplicate(false);
+      }
+    };
+
+    const timeoutId = setTimeout(getSuggestion, 300);
+    return () => clearTimeout(timeoutId);
+  }, [formData.source_path, formData.direction, formData.target_path, hasExample, suggestTargetPath]);
 
   const fetchEndpoint = async () => {
     try {
-      const response = await api.get(`/endpoints/${endpointId}`)
-      setEndpoint(response.data)
+      const response = await api.get(`/endpoints/${endpointId}`);
+      setEndpoint(response.data);
     } catch (error) {
-      console.error('Error fetching endpoint:', error)
+      console.error('Error fetching endpoint:', error);
     }
-  }
+  };
 
   const fetchMappings = async () => {
     try {
-      const response = await api.get(`/endpoints/${endpointId}/mappings`)
-      console.log('Mappings data:', response.data)
-      // Garantir que sempre temos um array
-      const data = Array.isArray(response.data) ? response.data : []
-      setMappings(data)
+      const response = await api.get(`/endpoints/${endpointId}/mappings`);
+      const data = Array.isArray(response.data) ? response.data : [];
+      setMappings(data);
     } catch (error) {
-      console.error('Error fetching mappings:', error)
-      // Em caso de erro, definir array vazio
-      setMappings([])
+      console.error('Error fetching mappings:', error);
+      setMappings([]);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleOpenModal = (mapping = null) => {
     if (mapping) {
-      setSelectedMapping(mapping)
+      setSelectedMapping(mapping);
       setFormData({
         direction: mapping.direction,
         source_path: mapping.source_path || mapping.sourcePath || '',
         target_path: mapping.target_path || mapping.targetPath || '',
-      })
+      });
     } else {
-      setSelectedMapping(null)
+      setSelectedMapping(null);
       setFormData({
         direction: activeTab,
         source_path: '',
         target_path: '',
-      })
+      });
     }
-    setIsModalOpen(true)
-  }
+    setTargetSuggestion(null);
+    setIsModalOpen(true);
+  };
 
   const handleCloseModal = () => {
-    setIsModalOpen(false)
-    setSelectedMapping(null)
-  }
+    setIsModalOpen(false);
+    setSelectedMapping(null);
+    setTargetSuggestion(null);
+    setTargetSuggestionReason(null);
+    setIsDuplicate(false);
+  };
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
+    e.preventDefault();
 
-    // Valida apenas se for response
-    if (formData.direction === 'response' && !validation.valid) {
-      alert('Corrija os erros de validação antes de salvar')
-      return
+    // Aviso extra se for duplicata
+    if (isDuplicate && !selectedMapping) {
+      const confirmCreate = window.confirm(
+        '⚠️ ATENÇÃO: Já existe um mapeamento para este caminho de origem!\n\n' +
+        'Criar um mapeamento duplicado pode causar conflitos e comportamento inesperado.\n\n' +
+        'Você tem certeza que deseja continuar?'
+      );
+      
+      if (!confirmCreate) {
+        return; // Cancela a criação
+      }
     }
 
     try {
@@ -122,51 +184,64 @@ function FieldMappings() {
         sourcePath: formData.source_path,
         targetPath: formData.target_path,
         endpointId: endpointId,
-      }
+      };
 
       if (selectedMapping) {
-        await api.put(`/mappings/${selectedMapping.id}`, payload)
+        await api.put(`/mappings/${selectedMapping.id}`, payload);
       } else {
-        await api.post('/mappings', payload)
+        await api.post('/mappings', payload);
       }
-      fetchMappings()
-      handleCloseModal()
+      fetchMappings();
+      handleCloseModal();
     } catch (error) {
-      console.error('Error saving mapping:', error)
-      alert('Erro ao salvar mapeamento')
+      console.error('Error saving mapping:', error);
+      alert('Erro ao salvar mapeamento');
     }
-  }
+  };
 
   const handleDelete = async () => {
     try {
-      await api.delete(`/mappings/${selectedMapping.id}`)
-      fetchMappings()
+      await api.delete(`/mappings/${selectedMapping.id}`);
+      fetchMappings();
     } catch (error) {
-      console.error('Error deleting mapping:', error)
-      alert('Erro ao excluir mapeamento')
+      console.error('Error deleting mapping:', error);
+      alert('Erro ao excluir mapeamento');
     }
-  }
+  };
 
   const handleOpenDeleteDialog = (mapping) => {
-    setSelectedMapping(mapping)
-    setIsDeleteDialogOpen(true)
-  }
-
-  const validation = useMappingValidator(
-    mappings.filter((m) => m.direction === 'response'),
-    isModalOpen && formData.direction === 'response' ? formData : null
-  )
+    setSelectedMapping(mapping);
+    setIsDeleteDialogOpen(true);
+  };
 
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
         <LoadingSpinner size="lg" />
       </div>
-    )
+    );
   }
 
   return (
     <div className="space-y-6">
+      {/* INDICADOR SEMPRE VISÍVEL - TESTE */}
+      <div style={{position: 'fixed', top: '10px', right: '10px', backgroundColor: isExampleModalOpen ? 'red' : 'green', color: 'white', padding: '20px', zIndex: 999999, fontSize: '20px', fontWeight: 'bold', border: '5px solid yellow'}}>
+        MODAL: {isExampleModalOpen ? 'ABERTO ✅' : 'FECHADO ❌'}
+        <div style={{fontSize: '12px', marginTop: '10px'}}>
+          Type: {typeof isExampleModalOpen}<br/>
+          Value: {String(isExampleModalOpen)}<br/>
+          Boolean: {isExampleModalOpen === true ? 'TRUE' : 'FALSE'}
+        </div>
+      </div>
+
+      {/* TESTE: SEMPRE RENDERIZA */}
+      <div style={{position: 'fixed', top: '150px', right: '10px', backgroundColor: 'blue', color: 'white', padding: '10px', zIndex: 999999}}>
+        Componente renderizou: {new Date().toLocaleTimeString()}
+      </div>
+
+      {/* TESTE: Log sempre */}
+      {console.log('🔵 Component render - isExampleModalOpen:', isExampleModalOpen, 'Type:', typeof isExampleModalOpen)}
+
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Mapeamentos de Campos</h1>
@@ -184,6 +259,78 @@ function FieldMappings() {
           <span>Novo Mapeamento</span>
         </button>
       </div>
+
+      {/* Alerta sobre estrutura */}
+      {!hasExample && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="flex items-start space-x-3">
+            <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h4 className="text-sm font-medium text-yellow-900">
+                Nenhum exemplo de resposta disponível
+              </h4>
+              <p className="text-sm text-yellow-800 mt-1">
+                Execute um teste no endpoint para obter sugestões automáticas e validação de caminhos.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {hasExample && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="text-green-600">
+                <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-green-900">
+                  {structure?.totalPaths || 0} caminhos disponíveis para mapeamento
+                </p>
+                {structure?.lastTestedAt && (
+                  <p className="text-xs text-green-700">
+                    Última atualização: {new Date(structure.lastTestedAt).toLocaleString('pt-BR')}
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleOpenExampleModal();
+                }}
+                className="btn btn-secondary flex items-center space-x-2 text-sm"
+                title="Ver exemplo completo da resposta"
+                type="button"
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                <span>Ver Exemplo</span>
+              </button>
+              <button
+                onClick={fetchStructure}
+                disabled={structureLoading}
+                className="btn btn-secondary flex items-center space-x-2 text-sm"
+                type="button"
+              >
+                <RefreshCw className={`h-4 w-4 ${structureLoading ? 'animate-spin' : ''}`} />
+                <span>Atualizar</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="card">
         {/* Tabs */}
@@ -304,7 +451,28 @@ function FieldMappings() {
         onClose={handleCloseModal}
         title={selectedMapping ? 'Editar Mapeamento' : 'Novo Mapeamento'}
       >
-        {formData.direction === 'response' && <ValidationAlert validation={validation} />}
+        {/* Alerta de duplicata */}
+        {isDuplicate && !selectedMapping && (
+          <div className="mb-4 bg-yellow-50 border-l-4 border-yellow-400 p-4">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-yellow-700 font-semibold">
+                  ⚠️ Mapeamento Duplicado Detectado
+                </p>
+                <p className="text-sm text-yellow-700 mt-1">
+                  Já existe um mapeamento para este caminho de origem. Criar outro causará conflito.
+                  <strong> Recomendamos editar o existente ao invés de criar um novo.</strong>
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+        
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="direction" className="block text-sm font-medium text-gray-700 mb-2">
@@ -329,42 +497,28 @@ function FieldMappings() {
             </p>
           </div>
 
-          <div>
-            <label htmlFor="source_path" className="block text-sm font-medium text-gray-700 mb-2">
-              Caminho de Origem *
-            </label>
-            <input
-              id="source_path"
-              type="text"
-              value={formData.source_path}
-              onChange={(e) => setFormData({ ...formData, source_path: e.target.value })}
-              className="input font-mono"
-              placeholder="data.customer.name"
-              required
-              autoFocus
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Caminho do campo de origem (ex: data.user.email)
-            </p>
-          </div>
+          {/* Input de Source Path com validação */}
+          <PathInput
+            label="Caminho de Origem"
+            value={formData.source_path}
+            onChange={(value) => setFormData({ ...formData, source_path: value })}
+            placeholder="data.customer.name ou items[*].id"
+            required
+            paths={formData.direction === 'response' ? structure?.paths || [] : []}
+            onValidate={validatePath}
+            direction={formData.direction}
+          />
 
-          <div>
-            <label htmlFor="target_path" className="block text-sm font-medium text-gray-700 mb-2">
-              Caminho de Destino *
-            </label>
-            <input
-              id="target_path"
-              type="text"
-              value={formData.target_path}
-              onChange={(e) => setFormData({ ...formData, target_path: e.target.value })}
-              className="input font-mono"
-              placeholder="cliente.nome"
-              required
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Caminho do campo de destino (ex: customer.fullName)
-            </p>
-          </div>
+          {/* Input de Target Path com sugestão */}
+          <PathInput
+            label="Caminho de Destino"
+            value={formData.target_path}
+            onChange={(value) => setFormData({ ...formData, target_path: value })}
+            placeholder="cliente.nome ou veiculos[*].id"
+            required
+            suggestion={targetSuggestion}
+            suggestionReason={targetSuggestionReason}
+          />
 
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
             <h4 className="text-sm font-medium text-blue-900 mb-2">Exemplo de Mapeamento</h4>
@@ -378,7 +532,9 @@ function FieldMappings() {
               <p className="mt-2">
                 <strong>Response:</strong> Mapeia dados da API externa para o seu sistema
               </p>
-              <p className="font-mono bg-white px-2 py-1 rounded">user.id → cliente.id_externo</p>
+              <p className="font-mono bg-white px-2 py-1 rounded">
+                user.id → cliente.id_externo
+              </p>
             </div>
           </div>
 
@@ -386,8 +542,11 @@ function FieldMappings() {
             <button type="button" onClick={handleCloseModal} className="btn btn-secondary">
               Cancelar
             </button>
-            <button type="submit" className="btn btn-primary">
-              {selectedMapping ? 'Salvar' : 'Criar'}
+            <button 
+              type="submit" 
+              className={`btn ${isDuplicate && !selectedMapping ? 'bg-yellow-600 hover:bg-yellow-700 text-white' : 'btn-primary'}`}
+            >
+              {isDuplicate && !selectedMapping ? '⚠️ Criar Mesmo Assim' : selectedMapping ? 'Salvar' : 'Criar'}
             </button>
           </div>
         </form>
@@ -398,10 +557,10 @@ function FieldMappings() {
         onClose={() => setIsDeleteDialogOpen(false)}
         onConfirm={handleDelete}
         title="Excluir Mapeamento"
-        message={`Tem certeza que deseja excluir este mapeamento? Esta ação não pode ser desfeita.`}
+        message="Tem certeza que deseja excluir este mapeamento? Esta ação não pode ser desfeita."
       />
     </div>
-  )
+  );
 }
 
-export default FieldMappings
+export default FieldMappings;
