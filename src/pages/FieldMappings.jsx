@@ -6,6 +6,8 @@ import Modal from '../components/Modal'
 import SearchBar from '../components/SearchBar'
 import ConfirmDialog from '../components/ConfirmDialog'
 import LoadingSpinner from '../components/LoadingSpinner'
+import { useMappingValidator } from '../hooks/useMappingValidator'
+import ValidationAlert from '../components/ValidationAlert'
 
 const DIRECTIONS = ['request', 'response']
 
@@ -39,18 +41,18 @@ function FieldMappings() {
     }
     const filtered = mappings.filter((mapping) => {
       const matchesTab = mapping.direction === activeTab
-      
+
       if (!searchTerm) {
         return matchesTab
       }
-      
+
       const sourcePath = mapping.source_path || mapping.sourcePath || ''
       const targetPath = mapping.target_path || mapping.targetPath || ''
-      
+
       const matchesSearch =
         sourcePath.toLowerCase().includes(searchTerm.toLowerCase()) ||
         targetPath.toLowerCase().includes(searchTerm.toLowerCase())
-      
+
       return matchesSearch && matchesTab
     })
     setFilteredMappings(filtered)
@@ -107,6 +109,13 @@ function FieldMappings() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+
+    // Valida apenas se for response
+    if (formData.direction === 'response' && !validation.valid) {
+      alert('Corrija os erros de validação antes de salvar')
+      return
+    }
+
     try {
       const payload = {
         direction: formData.direction,
@@ -143,6 +152,11 @@ function FieldMappings() {
     setIsDeleteDialogOpen(true)
   }
 
+  const validation = useMappingValidator(
+    mappings.filter((m) => m.direction === 'response'),
+    isModalOpen && formData.direction === 'response' ? formData : null
+  )
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -162,7 +176,10 @@ function FieldMappings() {
             </p>
           )}
         </div>
-        <button onClick={() => handleOpenModal()} className="btn btn-primary flex items-center space-x-2">
+        <button
+          onClick={() => handleOpenModal()}
+          className="btn btn-primary flex items-center space-x-2"
+        >
           <Plus className="h-5 w-5" />
           <span>Novo Mapeamento</span>
         </button>
@@ -287,6 +304,7 @@ function FieldMappings() {
         onClose={handleCloseModal}
         title={selectedMapping ? 'Editar Mapeamento' : 'Novo Mapeamento'}
       >
+        {formData.direction === 'response' && <ValidationAlert validation={validation} />}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="direction" className="block text-sm font-medium text-gray-700 mb-2">
@@ -360,9 +378,7 @@ function FieldMappings() {
               <p className="mt-2">
                 <strong>Response:</strong> Mapeia dados da API externa para o seu sistema
               </p>
-              <p className="font-mono bg-white px-2 py-1 rounded">
-                user.id → cliente.id_externo
-              </p>
+              <p className="font-mono bg-white px-2 py-1 rounded">user.id → cliente.id_externo</p>
             </div>
           </div>
 
