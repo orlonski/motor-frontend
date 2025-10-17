@@ -822,25 +822,40 @@ function Endpoints() {
                 {mappedResult.success ? 'Resposta Filtrada (Mapped):' : 'Detalhes do Erro:'}
               </h4>
               <div className="bg-gray-50 rounded-lg p-4 max-h-96 overflow-auto">
-                <pre className="text-xs font-mono text-gray-800 whitespace-pre-wrap">
-                  {(() => {
+              <pre className="text-xs font-mono text-gray-800 whitespace-pre-wrap">
+                {(() => {
+                  // Se a operação falhou, mostra os detalhes do erro
+                  if (!mappedResult.success) {
                     try {
-                      if (mappedResult.success) {
-                        // Se mappedData já é string, faz parse primeiro
-                        const data = typeof mappedResult.mappedData === 'string'
-                          ? JSON.parse(mappedResult.mappedData)
-                          : mappedResult.mappedData
-                        return JSON.stringify(data, null, 2)
-                      } else {
-                        return JSON.stringify(mappedResult.details || mappedResult.error, null, 2)
-                      }
-                    } catch (error) {
-                      // Se falhar o parse, retorna o valor original
-                      console.error('Erro ao formatar JSON:', error)
-                      return mappedResult.mappedData || mappedResult.details || mappedResult.error
+                      return JSON.stringify(mappedResult.details || mappedResult.error, null, 2);
+                    } catch (e) {
+                      return mappedResult.details || mappedResult.error;
                     }
-                  })()}
-                </pre>
+                  }
+
+                  // Pega o dado e o tipo do endpoint para decidir como exibir
+                  const dataToDisplay = mappedResult.mappedData;
+                  const endpointType = (mappedResult.endpoint.typeResult || mappedResult.endpoint.type_result || 'JSON').toUpperCase();
+
+                  // 1. Se o tipo for XML, apenas exibe o texto puro.
+                  if (endpointType === 'XML') {
+                    return dataToDisplay;
+                  }
+
+                  // 2. Se for JSON (ou qualquer outro tipo, como fallback), tenta formatar.
+                  try {
+                    // O dado pode ser uma string JSON ou já um objeto
+                    const parsedData = typeof dataToDisplay === 'string' 
+                      ? JSON.parse(dataToDisplay) 
+                      : dataToDisplay;
+                    return JSON.stringify(parsedData, null, 2);
+                  } catch (error) {
+                    // 3. Se a formatação do JSON falhar, exibe o texto puro para não quebrar a tela.
+                    console.error('Erro ao formatar JSON:', error);
+                    return dataToDisplay;
+                  }
+                })()}
+              </pre>
               </div>
             </div>
 
