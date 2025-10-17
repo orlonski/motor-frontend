@@ -8,6 +8,7 @@ import ConfirmDialog from '../components/ConfirmDialog'
 import LoadingSpinner from '../components/LoadingSpinner'
 
 const HTTP_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
+const REQUEST_TYPES = ['REST', 'SOAP']
 
 function Endpoints() {
   const { integrationId } = useParams()
@@ -25,6 +26,7 @@ function Endpoints() {
     url: '',
     headersTemplate: '',
     authentication_type: 'None',
+    request_type: 'REST',
   })
 
   // Estados para teste de endpoint
@@ -87,6 +89,7 @@ function Endpoints() {
           ? JSON.stringify(endpoint.headersTemplate, null, 2)
           : '',
         authentication_type: endpoint.authentication_type || 'None',
+        request_type: endpoint.requestType || 'REST',
       })
     } else {
       setSelectedEndpoint(null)
@@ -96,6 +99,7 @@ function Endpoints() {
         url: '',
         headersTemplate: '',
         authentication_type: 'None',
+        request_type: 'REST',
       })
     }
     setIsModalOpen(true)
@@ -115,6 +119,7 @@ function Endpoints() {
         url: formData.url,
         headersTemplate: formData.headersTemplate ? JSON.parse(formData.headersTemplate) : null,
         authenticationType: formData.authentication_type,
+        requestType: formData.request_type,
         integrationId: integrationId,
       }
 
@@ -369,6 +374,25 @@ function Endpoints() {
               {HTTP_METHODS.map((method) => (
                 <option key={method} value={method}>
                   {method}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="request_type" className="block text-sm font-medium text-gray-700 mb-2">
+              Tipo de Request *
+            </label>
+            <select
+              id="request_type"
+              value={formData.request_type}
+              onChange={(e) => setFormData({ ...formData, request_type: e.target.value })}
+              className="input"
+              required
+            >
+              {REQUEST_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {type}
                 </option>
               ))}
             </select>
