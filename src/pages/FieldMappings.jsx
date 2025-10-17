@@ -32,17 +32,11 @@ function FieldMappings() {
   const [isDuplicate, setIsDuplicate] = useState(false);
   const [isExampleModalOpen, setIsExampleModalOpen] = useState(false);
 
-  console.log('🎯 TOP OF COMPONENT - isExampleModalOpen:', isExampleModalOpen);
-
   const handleOpenExampleModal = () => {
-    console.log('🔵 Abrindo modal de exemplo');
-    console.log('Structure:', structure);
     setIsExampleModalOpen(true);
   };
 
   const handleCloseExampleModal = () => {
-    console.log('🔴 Fechando modal de exemplo');
-    console.trace('Stack trace de quem chamou close:'); // Mostra quem chamou
     setIsExampleModalOpen(false);
   };
 
@@ -224,24 +218,6 @@ function FieldMappings() {
 
   return (
     <div className="space-y-6">
-      {/* INDICADOR SEMPRE VISÍVEL - TESTE */}
-      <div style={{position: 'fixed', top: '10px', right: '10px', backgroundColor: isExampleModalOpen ? 'red' : 'green', color: 'white', padding: '20px', zIndex: 999999, fontSize: '20px', fontWeight: 'bold', border: '5px solid yellow'}}>
-        MODAL: {isExampleModalOpen ? 'ABERTO ✅' : 'FECHADO ❌'}
-        <div style={{fontSize: '12px', marginTop: '10px'}}>
-          Type: {typeof isExampleModalOpen}<br/>
-          Value: {String(isExampleModalOpen)}<br/>
-          Boolean: {isExampleModalOpen === true ? 'TRUE' : 'FALSE'}
-        </div>
-      </div>
-
-      {/* TESTE: SEMPRE RENDERIZA */}
-      <div style={{position: 'fixed', top: '150px', right: '10px', backgroundColor: 'blue', color: 'white', padding: '10px', zIndex: 999999}}>
-        Componente renderizou: {new Date().toLocaleTimeString()}
-      </div>
-
-      {/* TESTE: Log sempre */}
-      {console.log('🔵 Component render - isExampleModalOpen:', isExampleModalOpen, 'Type:', typeof isExampleModalOpen)}
-
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Mapeamentos de Campos</h1>
@@ -559,6 +535,63 @@ function FieldMappings() {
         title="Excluir Mapeamento"
         message="Tem certeza que deseja excluir este mapeamento? Esta ação não pode ser desfeita."
       />
+
+      {/* Modal de Exemplo */}
+      <Modal
+        isOpen={isExampleModalOpen}
+        onClose={handleCloseExampleModal}
+        title="Exemplo de Resposta da API"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Exemplo de resposta obtido do último teste do endpoint:
+          </p>
+          <pre className="bg-gray-50 p-4 rounded-lg overflow-auto text-xs font-mono max-h-96">
+            {(() => {
+              try {
+                if (structure?.structure) {
+                  return JSON.stringify(structure.structure, null, 2);
+                }
+                if (structure?.example) {
+                  return JSON.stringify(structure.example, null, 2);
+                }
+                if (endpoint?.response_example) {
+                  const parsed = typeof endpoint.response_example === 'string'
+                    ? JSON.parse(endpoint.response_example)
+                    : endpoint.response_example;
+                  return JSON.stringify(parsed, null, 2);
+                }
+                return 'Nenhum exemplo disponível';
+              } catch (error) {
+                return endpoint?.response_example || 'Nenhum exemplo disponível';
+              }
+            })()}
+          </pre>
+          {structure?.totalPaths > 0 && (
+            <div className="text-sm text-gray-600">
+              <p className="font-medium mb-2">Caminhos disponíveis ({structure.totalPaths}):</p>
+              <div className="max-h-60 overflow-y-auto bg-gray-50 p-3 rounded">
+                {structure.paths && structure.paths.length > 0 ? (
+                  <ul className="space-y-1">
+                    {structure.paths.map((pathObj, index) => (
+                      <li key={index} className="font-mono text-xs">
+                        {typeof pathObj === 'string' ? pathObj : pathObj.path}
+                        {typeof pathObj === 'object' && pathObj.type && (
+                          <span className="text-gray-500 ml-2">
+                            ({pathObj.type}{pathObj.isArray ? '[]' : ''})
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-gray-500 text-xs">Nenhum caminho encontrado</p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </Modal>
     </div>
   );
 }
