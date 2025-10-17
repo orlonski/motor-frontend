@@ -8,6 +8,7 @@ import ConfirmDialog from '../components/ConfirmDialog'
 
 const HTTP_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
 const REQUEST_TYPES = ['REST', 'SOAP']
+const RESULT_TYPES = ['JSON', 'XML']
 
 function Endpoints() {
   const { integrationId } = useParams()
@@ -25,6 +26,7 @@ function Endpoints() {
     headersTemplate: '',
     authentication_type: 'None',
     request_type: 'REST',
+    type_result: 'JSON',
   })
 
   // Estados para teste de endpoint
@@ -83,15 +85,21 @@ function Endpoints() {
   const handleOpenModal = (endpoint = null) => {
     if (endpoint) {
       setSelectedEndpoint(endpoint)
+
+      // Pega o typeResult e converte para maiúsculo
+      const typeResult = endpoint.typeResult || endpoint.type_result || 'JSON'
+      const typeResultUpper = typeResult.toUpperCase()
+
       setFormData({
         name: endpoint.name,
-        httpMethod: endpoint.httpMethod,
+        httpMethod: endpoint.httpMethod || endpoint.http_method,
         url: endpoint.url,
-        headersTemplate: endpoint.headersTemplate
-          ? JSON.stringify(endpoint.headersTemplate, null, 2)
+        headersTemplate: endpoint.headersTemplate || endpoint.headers_template
+          ? JSON.stringify(endpoint.headersTemplate || endpoint.headers_template, null, 2)
           : '',
-        authentication_type: endpoint.authentication_type || 'None',
-        request_type: endpoint.requestType || 'REST',
+        authentication_type: endpoint.authentication_type || endpoint.authenticationType || 'None',
+        request_type: endpoint.requestType || endpoint.request_type || 'REST',
+        type_result: typeResultUpper,
       })
     } else {
       setSelectedEndpoint(null)
@@ -102,6 +110,7 @@ function Endpoints() {
         headersTemplate: '',
         authentication_type: 'None',
         request_type: 'REST',
+        type_result: 'JSON',
       })
     }
     setIsModalOpen(true)
@@ -122,6 +131,7 @@ function Endpoints() {
         headersTemplate: formData.headersTemplate ? JSON.parse(formData.headersTemplate) : null,
         authenticationType: formData.authentication_type,
         requestType: formData.request_type,
+        typeResult: formData.type_result,
         integrationId: integrationId,
       }
 
@@ -300,14 +310,25 @@ function Endpoints() {
                         </span>
                         <span
                           className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                            endpoint.requestType === 'SOAP'
+                            (endpoint.requestType || endpoint.request_type) === 'SOAP'
                               ? 'bg-blue-100 text-blue-800'
-                              : endpoint.requestType === 'REST'
+                              : (endpoint.requestType || endpoint.request_type) === 'REST'
                               ? 'bg-green-100 text-green-800'
                               : 'bg-red-100 text-red-800'
                           }`}
                         >
-                          {endpoint.requestType}
+                          {endpoint.requestType || endpoint.request_type}
+                        </span>
+                        <span
+                          className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                            (endpoint.typeResult || endpoint.type_result || 'JSON').toUpperCase() === 'JSON'
+                              ? 'bg-indigo-100 text-indigo-800'
+                              : (endpoint.typeResult || endpoint.type_result || 'JSON').toUpperCase() === 'XML'
+                              ? 'bg-orange-100 text-orange-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}
+                        >
+                          {(endpoint.typeResult || endpoint.type_result || 'JSON').toUpperCase()}
                         </span>
                       </div>
                     </div>
@@ -385,6 +406,9 @@ function Endpoints() {
                     Tipo request
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Tipo resposta
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     URL
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -418,14 +442,27 @@ function Endpoints() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                          endpoint.requestType === 'SOAP'
+                          (endpoint.requestType || endpoint.request_type) === 'SOAP'
                             ? 'bg-blue-100 text-blue-800'
-                            : endpoint.requestType === 'REST'
+                            : (endpoint.requestType || endpoint.request_type) === 'REST'
                             ? 'bg-green-100 text-green-800'
                             : 'bg-red-100 text-red-800'
                         }`}
                       >
-                        {endpoint.requestType}
+                        {endpoint.requestType || endpoint.request_type}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                          (endpoint.typeResult || endpoint.type_result || 'JSON').toUpperCase() === 'JSON'
+                            ? 'bg-indigo-100 text-indigo-800'
+                            : (endpoint.typeResult || endpoint.type_result || 'JSON').toUpperCase() === 'XML'
+                            ? 'bg-orange-100 text-orange-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}
+                      >
+                        {(endpoint.typeResult || endpoint.type_result || 'JSON').toUpperCase()}
                       </span>
                     </td>
                     <td className="px-6 py-4">
@@ -550,6 +587,25 @@ function Endpoints() {
               required
             >
               {REQUEST_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {type}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="type_result" className="block text-sm font-medium text-gray-700 mb-2">
+              Tipo de Resposta *
+            </label>
+            <select
+              id="type_result"
+              value={formData.type_result}
+              onChange={(e) => setFormData({ ...formData, type_result: e.target.value })}
+              className="input"
+              required
+            >
+              {RESULT_TYPES.map((type) => (
                 <option key={type} value={type}>
                   {type}
                 </option>
