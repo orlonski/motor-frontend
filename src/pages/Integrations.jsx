@@ -119,9 +119,12 @@ function Integrations() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-900">Integrações</h1>
-        <button onClick={() => handleOpenModal()} className="btn btn-primary flex items-center space-x-2">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Integrações</h1>
+        <button
+          onClick={() => handleOpenModal()}
+          className="btn btn-primary flex items-center justify-center space-x-2 w-full sm:w-auto"
+        >
           <Plus className="h-5 w-5" />
           <span>Nova Integração</span>
         </button>
@@ -143,8 +146,47 @@ function Integrations() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
+          <>
+            {/* Visualização em Cards para Mobile */}
+            <div className="grid grid-cols-1 gap-4 md:hidden">
+              {filteredIntegrations.map((integration) => (
+                <div key={integration.id} className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h3 className="text-sm font-medium text-gray-900">{integration.name}</h3>
+                      <p className="text-xs text-gray-500 mt-1">{integration.description || '-'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-end space-x-3 pt-2 border-t border-gray-100">
+                    <button
+                      onClick={() => navigate(`/integrations/${integration.id}/endpoints`)}
+                      className="text-primary-600 hover:text-primary-900"
+                      title="Ver endpoints"
+                    >
+                      <ArrowRight className="h-5 w-5" />
+                    </button>
+                    <button
+                      onClick={() => handleOpenModal(integration)}
+                      className="text-blue-600 hover:text-blue-900"
+                      title="Editar"
+                    >
+                      <Edit className="h-5 w-5" />
+                    </button>
+                    <button
+                      onClick={() => handleOpenDeleteDialog(integration)}
+                      className="text-red-600 hover:text-red-900"
+                      title="Excluir"
+                    >
+                      <Trash2 className="h-5 w-5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Visualização em Tabela para Desktop */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -201,6 +243,7 @@ function Integrations() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
 

@@ -201,14 +201,14 @@ function Endpoints() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Endpoints</h1>
-          {integration && <p className="text-gray-600 mt-1">Integração: {integration.name}</p>}
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+        <div className="flex-1">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Endpoints</h1>
+          {integration && <p className="text-sm sm:text-base text-gray-600 mt-1">Integração: {integration.name}</p>}
         </div>
         <button
           onClick={() => handleOpenModal()}
-          className="btn btn-primary flex items-center space-x-2"
+          className="btn btn-primary flex items-center justify-center space-x-2 w-full sm:w-auto"
         >
           <Plus className="h-5 w-5" />
           <span>Novo Endpoint</span>
@@ -231,8 +231,89 @@ function Endpoints() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
+          <>
+            {/* Visualização em Cards para Mobile */}
+            <div className="grid grid-cols-1 gap-4 md:hidden">
+              {filteredEndpoints.map((endpoint) => (
+                <div key={endpoint.id} className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h3 className="text-sm font-medium text-gray-900">{endpoint.name}</h3>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <span
+                          className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                            endpoint.httpMethod === 'GET'
+                              ? 'bg-blue-100 text-blue-800'
+                              : endpoint.httpMethod === 'POST'
+                              ? 'bg-green-100 text-green-800'
+                              : endpoint.httpMethod === 'PUT'
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : endpoint.httpMethod === 'PATCH'
+                              ? 'bg-purple-100 text-purple-800'
+                              : 'bg-red-100 text-red-800'
+                          }`}
+                        >
+                          {endpoint.httpMethod}
+                        </span>
+                        <span
+                          className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                            endpoint.requestType === 'SOAP'
+                              ? 'bg-blue-100 text-blue-800'
+                              : endpoint.requestType === 'REST'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-red-100 text-red-800'
+                          }`}
+                        >
+                          {endpoint.requestType}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-500 break-all">
+                    {endpoint.url}
+                  </div>
+                  <div className="flex items-center justify-end space-x-3 pt-2 border-t border-gray-100">
+                    <button
+                      onClick={() => handleTestEndpoint(endpoint)}
+                      disabled={testingEndpointId === endpoint.id}
+                      className="text-green-600 hover:text-green-900 disabled:opacity-50"
+                      title="Testar endpoint"
+                    >
+                      {testingEndpointId === endpoint.id ? (
+                        <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-green-600"></div>
+                      ) : (
+                        <Play className="h-5 w-5" />
+                      )}
+                    </button>
+                    <button
+                      onClick={() => navigate(`/endpoints/${endpoint.id}/mappings`)}
+                      className="text-primary-600 hover:text-primary-900"
+                      title="Ver mapeamentos"
+                    >
+                      <ArrowRight className="h-5 w-5" />
+                    </button>
+                    <button
+                      onClick={() => handleOpenModal(endpoint)}
+                      className="text-blue-600 hover:text-blue-900"
+                      title="Editar"
+                    >
+                      <Edit className="h-5 w-5" />
+                    </button>
+                    <button
+                      onClick={() => handleOpenDeleteDialog(endpoint)}
+                      className="text-red-600 hover:text-red-900"
+                      title="Excluir"
+                    >
+                      <Trash2 className="h-5 w-5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Visualização em Tabela para Desktop */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -335,6 +416,7 @@ function Endpoints() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
 
