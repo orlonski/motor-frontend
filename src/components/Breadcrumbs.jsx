@@ -11,25 +11,49 @@ function Breadcrumbs() {
   useEffect(() => {
     const fetchNames = async () => {
       const newNames = {}
-      
-      if (params.integrationId) {
+
+      // Se temos endpointId mas não temos integrationId, precisamos buscar o endpoint primeiro
+      // para pegar o integrationId dele
+      if (params.endpointId && !params.integrationId) {
         try {
-          const response = await api.get(`/integrations/${params.integrationId}`)
-          newNames.integration = response.data.name
-        } catch (error) {
-          console.error('Error fetching integration:', error)
-        }
-      }
-      
-      if (params.endpointId) {
-        try {
-          const response = await api.get(`/endpoints/${params.endpointId}`)
-          newNames.endpoint = response.data.name
+          const endpointResponse = await api.get(`/endpoints/${params.endpointId}`)
+          newNames.endpoint = endpointResponse.data.name
+          newNames.endpointIntegrationId = endpointResponse.data.integrationId
+
+          // Agora busca a integração usando o ID que veio do endpoint
+          if (endpointResponse.data.integrationId) {
+            try {
+              const integrationResponse = await api.get(`/integrations/${endpointResponse.data.integrationId}`)
+              newNames.integration = integrationResponse.data.name
+            } catch (error) {
+              console.error('Error fetching integration:', error)
+            }
+          }
         } catch (error) {
           console.error('Error fetching endpoint:', error)
         }
+      } else {
+        // Fluxo normal: quando temos integrationId na URL
+        if (params.integrationId) {
+          try {
+            const response = await api.get(`/integrations/${params.integrationId}`)
+            newNames.integration = response.data.name
+          } catch (error) {
+            console.error('Error fetching integration:', error)
+          }
+        }
+
+        if (params.endpointId) {
+          try {
+            const response = await api.get(`/endpoints/${params.endpointId}`)
+            newNames.endpoint = response.data.name
+            newNames.endpointIntegrationId = response.data.integrationId
+          } catch (error) {
+            console.error('Error fetching endpoint:', error)
+          }
+        }
       }
-      
+
       setNames(newNames)
     }
 
@@ -40,19 +64,22 @@ function Breadcrumbs() {
     const pathnames = location.pathname.split('/').filter((x) => x)
     const crumbs = [{ name: 'Home', path: '/integrations', key: 'home' }]
 
+    // Pega o integrationId correto (da URL ou do endpoint)
+    const integrationId = params.integrationId || names.endpointIntegrationId
+
     if (pathnames.includes('integrations')) {
       if (!params.integrationId) {
         crumbs.push({ name: 'Integrações', path: '/integrations', key: 'integrations' })
       } else {
-        crumbs.push({ 
-          name: names.integration || 'Carregando...', 
+        crumbs.push({
+          name: names.integration || 'Carregando...',
           path: `/integrations/${params.integrationId}`,
           key: `integration-${params.integrationId}`
         })
-        
+
         if (pathnames.includes('endpoints')) {
-          crumbs.push({ 
-            name: 'Endpoints', 
+          crumbs.push({
+            name: 'Endpoints',
             path: `/integrations/${params.integrationId}/endpoints`,
             key: `endpoints-${params.integrationId}`
           })
@@ -61,13 +88,27 @@ function Breadcrumbs() {
     }
 
     if (pathnames.includes('mappings') && params.endpointId) {
-      crumbs.push({ 
-        name: names.endpoint || 'Carregando...', 
-        path: `/integrations/${params.integrationId}/endpoints`,
-        key: `endpoint-${params.endpointId}`
-      })
-      crumbs.push({ 
-        name: 'Mapeamentos', 
+      // Adiciona breadcrumb da integração se não estiver na URL mas temos o ID do endpoint
+      if (!params.integrationId && integrationId) {
+        crumbs.push({
+          name: names.integration || 'Carregando...',
+          path: `/integrations/${integrationId}`,
+          key: `integration-${integrationId}`
+        })
+      }
+
+      // Adiciona breadcrumb de Endpoints
+      if (integrationId) {
+        crumbs.push({
+          name: 'Endpoints',
+          path: `/integrations/${integrationId}/endpoints`,
+          key: `endpoints-${integrationId}`
+        })
+      }
+
+      // Adiciona breadcrumb de Mapeamentos (último, não clicável)
+      crumbs.push({
+        name: 'Mapeamentos',
         path: `/endpoints/${params.endpointId}/mappings`,
         key: `mappings-${params.endpointId}`
       })

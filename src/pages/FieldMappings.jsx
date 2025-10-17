@@ -31,8 +31,11 @@ function FieldMappings() {
   const [targetSuggestionReason, setTargetSuggestionReason] = useState(null);
   const [isDuplicate, setIsDuplicate] = useState(false);
   const [isExampleModalOpen, setIsExampleModalOpen] = useState(false);
+  const [exampleModalTab, setExampleModalTab] = useState('response'); // 'response', 'paths', 'mapped'
 
-  const handleOpenExampleModal = () => {
+  const handleOpenExampleModal = async () => {
+    // Recarrega o endpoint para garantir que temos os dados mais recentes (incluindo mapped_response_example)
+    await fetchEndpoint();
     setIsExampleModalOpen(true);
   };
 
@@ -591,60 +594,168 @@ function FieldMappings() {
         message="Tem certeza que deseja excluir este mapeamento? Esta ação não pode ser desfeita."
       />
 
-      {/* Modal de Exemplo */}
+      {/* Modal de Exemplo com Tabs */}
       <Modal
         isOpen={isExampleModalOpen}
         onClose={handleCloseExampleModal}
-        title="Exemplo de Resposta da API"
+        title="Visualização de Dados"
       >
         <div className="space-y-4">
-          <p className="text-sm text-gray-600">
-            Exemplo de resposta obtido do último teste do endpoint:
-          </p>
-          <pre className="bg-gray-50 p-4 rounded-lg overflow-auto text-xs font-mono max-h-96">
-            {(() => {
-              try {
-                if (structure?.structure) {
-                  return JSON.stringify(structure.structure, null, 2);
-                }
-                if (structure?.example) {
-                  return JSON.stringify(structure.example, null, 2);
-                }
-                if (endpoint?.response_example) {
-                  const parsed = typeof endpoint.response_example === 'string'
-                    ? JSON.parse(endpoint.response_example)
-                    : endpoint.response_example;
-                  return JSON.stringify(parsed, null, 2);
-                }
-                return 'Nenhum exemplo disponível';
-              } catch (error) {
-                return endpoint?.response_example || 'Nenhum exemplo disponível';
-              }
-            })()}
-          </pre>
-          {structure?.totalPaths > 0 && (
-            <div className="text-sm text-gray-600">
-              <p className="font-medium mb-2">Caminhos disponíveis ({structure.totalPaths}):</p>
-              <div className="max-h-60 overflow-y-auto bg-gray-50 p-3 rounded">
-                {structure.paths && structure.paths.length > 0 ? (
-                  <ul className="space-y-1">
-                    {structure.paths.map((pathObj, index) => (
-                      <li key={index} className="font-mono text-xs">
-                        {typeof pathObj === 'string' ? pathObj : pathObj.path}
-                        {typeof pathObj === 'object' && pathObj.type && (
-                          <span className="text-gray-500 ml-2">
-                            ({pathObj.type}{pathObj.isArray ? '[]' : ''})
-                          </span>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-gray-500 text-xs">Nenhum caminho encontrado</p>
-                )}
-              </div>
+          {/* Tabs do Modal */}
+          <div className="border-b border-gray-200">
+            <nav className="flex -mb-px">
+              <button
+                onClick={() => setExampleModalTab('response')}
+                className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                  exampleModalTab === 'response'
+                    ? 'border-primary-600 text-primary-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Response Original
+              </button>
+              <button
+                onClick={() => setExampleModalTab('paths')}
+                className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                  exampleModalTab === 'paths'
+                    ? 'border-primary-600 text-primary-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Caminhos ({structure?.totalPaths || 0})
+              </button>
+              <button
+                onClick={() => setExampleModalTab('mapped')}
+                className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                  exampleModalTab === 'mapped'
+                    ? 'border-primary-600 text-primary-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Mapped Response
+              </button>
+            </nav>
+          </div>
+
+          {/* Tab 1: Response Original */}
+          {exampleModalTab === 'response' && (
+            <div className="space-y-3">
+              <p className="text-sm text-gray-600">
+                Exemplo de resposta obtido do último teste do endpoint:
+              </p>
+              <pre className="bg-gray-50 p-4 rounded-lg overflow-auto text-xs font-mono max-h-96">
+                {(() => {
+                  try {
+                    if (structure?.structure) {
+                      return JSON.stringify(structure.structure, null, 2);
+                    }
+                    if (structure?.example) {
+                      return JSON.stringify(structure.example, null, 2);
+                    }
+                    if (endpoint?.response_example) {
+                      const parsed = typeof endpoint.response_example === 'string'
+                        ? JSON.parse(endpoint.response_example)
+                        : endpoint.response_example;
+                      return JSON.stringify(parsed, null, 2);
+                    }
+                    return 'Nenhum exemplo disponível';
+                  } catch (error) {
+                    return endpoint?.response_example || 'Nenhum exemplo disponível';
+                  }
+                })()}
+              </pre>
             </div>
           )}
+
+          {/* Tab 2: Caminhos Disponíveis */}
+          {exampleModalTab === 'paths' && (
+            <div className="space-y-3">
+              <p className="text-sm text-gray-600">
+                Caminhos extraídos da estrutura da resposta:
+              </p>
+              {structure?.totalPaths > 0 ? (
+                <div className="max-h-96 overflow-y-auto bg-gray-50 p-4 rounded-lg">
+                  {structure.paths && structure.paths.length > 0 ? (
+                    <ul className="space-y-1">
+                      {structure.paths.map((pathObj, index) => (
+                        <li key={index} className="font-mono text-xs text-gray-800">
+                          {typeof pathObj === 'string' ? pathObj : pathObj.path}
+                          {typeof pathObj === 'object' && pathObj.type && (
+                            <span className="text-gray-500 ml-2">
+                              ({pathObj.type}{pathObj.isArray ? '[]' : ''})
+                            </span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-gray-500 text-xs">Nenhum caminho encontrado</p>
+                  )}
+                </div>
+              ) : (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <p className="text-sm text-yellow-800">
+                    Nenhum caminho disponível. Execute um teste no endpoint primeiro.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Tab 3: Mapped Response */}
+          {exampleModalTab === 'mapped' && (
+            <div className="space-y-3">
+              <p className="text-sm text-gray-600">
+                Resposta filtrada com apenas os campos mapeados:
+              </p>
+              {(endpoint?.mapped_response_example || endpoint?.mappedResponseExample) ? (
+                <div className="space-y-3">
+                  <pre className="bg-purple-50 p-4 rounded-lg overflow-auto text-xs font-mono max-h-96 border border-purple-200">
+                    {(() => {
+                      try {
+                        const mappedData = endpoint.mappedResponseExample || endpoint.mapped_response_example;
+                        const parsed = typeof mappedData === 'string'
+                          ? JSON.parse(mappedData)
+                          : mappedData;
+                        return JSON.stringify(parsed, null, 2);
+                      } catch (error) {
+                        return endpoint.mappedResponseExample || endpoint.mapped_response_example;
+                      }
+                    })()}
+                  </pre>
+                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                    <p className="text-xs text-purple-800">
+                      ✓ Este é o resultado filtrado gerado pelo botão "Gerar Mapped Response"
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-gray-50 border border-gray-300 rounded-lg p-6 text-center">
+                  <svg className="h-12 w-12 text-gray-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <p className="text-sm text-gray-600 font-medium mb-2">
+                    Nenhum mapped response gerado ainda
+                  </p>
+                  <p className="text-xs text-gray-500 mb-4">
+                    Para gerar o mapped response:
+                  </p>
+                  <ol className="text-xs text-gray-600 text-left space-y-1 max-w-md mx-auto">
+                    <li>1. Volte para a lista de endpoints</li>
+                    <li>2. Configure os mapeamentos de campos (você já está aqui!)</li>
+                    <li>3. Clique no botão <strong className="text-purple-600">Sparkles (✨)</strong> ao lado do botão de teste</li>
+                    <li>4. O resultado aparecerá aqui automaticamente</li>
+                  </ol>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="flex justify-end pt-4 border-t border-gray-200">
+            <button onClick={handleCloseExampleModal} className="btn btn-primary">
+              Fechar
+            </button>
+          </div>
         </div>
       </Modal>
     </div>

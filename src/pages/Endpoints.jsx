@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Plus, Edit, Trash2, ArrowRight, Play, CheckCircle, XCircle } from 'lucide-react'
+import { Plus, Edit, Trash2, ArrowRight, Play, CheckCircle, XCircle, Sparkles } from 'lucide-react'
 import api from '../services/api'
 import Modal from '../components/Modal'
 import SearchBar from '../components/SearchBar'
@@ -33,6 +33,11 @@ function Endpoints() {
   const [testingEndpointId, setTestingEndpointId] = useState(null)
   const [testResult, setTestResult] = useState(null)
   const [isTestResultModalOpen, setIsTestResultModalOpen] = useState(false)
+
+  // Estados para geração de mapped response
+  const [generatingMappedId, setGeneratingMappedId] = useState(null)
+  const [mappedResult, setMappedResult] = useState(null)
+  const [isMappedResultModalOpen, setIsMappedResultModalOpen] = useState(false)
 
   const navigate = useNavigate()
 
@@ -191,6 +196,55 @@ function Endpoints() {
     setTestResult(null)
   }
 
+  // Função para gerar mapped response
+  const handleGenerateMapped = async (endpoint) => {
+    setGeneratingMappedId(endpoint.id)
+    setMappedResult(null)
+
+    try {
+      const response = await api.post(`/endpoints/${endpoint.id}/generate-mapped`)
+
+      setMappedResult({
+        success: true,
+        endpoint: endpoint,
+        mappedData: response.data.mappedData,
+        stats: response.data.stats,
+        message: response.data.message,
+      })
+
+      setIsMappedResultModalOpen(true)
+
+      // Recarrega endpoints para pegar o mapped_response_example atualizado
+      fetchEndpoints()
+    } catch (error) {
+      console.error('Error generating mapped response:', error)
+
+      setMappedResult({
+        success: false,
+        endpoint: endpoint,
+        error: error.response?.data?.message || error.response?.data?.error || error.message || 'Erro desconhecido',
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        details: error.response?.data,
+      })
+
+      setIsMappedResultModalOpen(true)
+    } finally {
+      setGeneratingMappedId(null)
+    }
+  }
+
+  const handleCloseMappedResultModal = () => {
+    setIsMappedResultModalOpen(false)
+    setMappedResult(null)
+  }
+
+  // Verifica se o botão de gerar mapped deve estar habilitado
+  const canGenerateMapped = (endpoint) => {
+    // Precisa ter response_example (testou o endpoint) E ter field_mappings (não verificamos aqui, backend valida)
+    return !!(endpoint.responseExample || endpoint.response_example)
+  }
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -286,6 +340,22 @@ function Endpoints() {
                       )}
                     </button>
                     <button
+                      onClick={() => handleGenerateMapped(endpoint)}
+                      disabled={!canGenerateMapped(endpoint) || generatingMappedId === endpoint.id}
+                      className="text-purple-600 hover:text-purple-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                      title={
+                        !canGenerateMapped(endpoint)
+                          ? 'Execute o teste do endpoint primeiro'
+                          : 'Gerar Mapped Response'
+                      }
+                    >
+                      {generatingMappedId === endpoint.id ? (
+                        <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-purple-600"></div>
+                      ) : (
+                        <Sparkles className="h-5 w-5" />
+                      )}
+                    </button>
+                    <button
                       onClick={() => navigate(`/endpoints/${endpoint.id}/mappings`)}
                       className="text-primary-600 hover:text-primary-900"
                       title="Ver mapeamentos"
@@ -374,7 +444,7 @@ function Endpoints() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex justify-end space-x-2">
-                        {/* Botão de Teste - NOVO */}
+                        {/* Botão de Teste */}
                         <button
                           onClick={() => handleTestEndpoint(endpoint)}
                           disabled={testingEndpointId === endpoint.id}
@@ -385,6 +455,24 @@ function Endpoints() {
                             <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-green-600"></div>
                           ) : (
                             <Play className="h-5 w-5" />
+                          )}
+                        </button>
+
+                        {/* Botão de Gerar Mapped Response - NOVO */}
+                        <button
+                          onClick={() => handleGenerateMapped(endpoint)}
+                          disabled={!canGenerateMapped(endpoint) || generatingMappedId === endpoint.id}
+                          className="text-purple-600 hover:text-purple-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                          title={
+                            !canGenerateMapped(endpoint)
+                              ? 'Execute o teste do endpoint primeiro'
+                              : 'Gerar Mapped Response'
+                          }
+                        >
+                          {generatingMappedId === endpoint.id ? (
+                            <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-purple-600"></div>
+                          ) : (
+                            <Sparkles className="h-5 w-5" />
                           )}
                         </button>
 
@@ -543,7 +631,7 @@ function Endpoints() {
         </form>
       </Modal>
 
-      {/* Modal de Resultado do Teste - NOVO */}
+      {/* Modal de Resultado do Teste */}
       <Modal
         isOpen={isTestResultModalOpen}
         onClose={handleCloseTestResultModal}
@@ -609,6 +697,100 @@ function Endpoints() {
 
             <div className="flex justify-end pt-4">
               <button onClick={handleCloseTestResultModal} className="btn btn-primary">
+                Fechar
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Modal de Resultado do Mapped Response - NOVO */}
+      <Modal
+        isOpen={isMappedResultModalOpen}
+        onClose={handleCloseMappedResultModal}
+        title="Resultado do Mapped Response"
+      >
+        {mappedResult && (
+          <div className="space-y-4">
+            {/* Header com ícone de sucesso/erro */}
+            <div
+              className={`flex items-start space-x-3 p-4 rounded-lg ${
+                mappedResult.success
+                  ? 'bg-purple-50 border border-purple-200'
+                  : 'bg-red-50 border border-red-200'
+              }`}
+            >
+              <div className="flex-shrink-0">
+                {mappedResult.success ? (
+                  <CheckCircle className="h-6 w-6 text-purple-600" />
+                ) : (
+                  <XCircle className="h-6 w-6 text-red-600" />
+                )}
+              </div>
+              <div className="flex-1">
+                <h3
+                  className={`text-sm font-medium ${
+                    mappedResult.success ? 'text-purple-800' : 'text-red-800'
+                  }`}
+                >
+                  {mappedResult.success
+                    ? 'Mapped response gerado com sucesso!'
+                    : 'Erro ao gerar mapped response'}
+                </h3>
+                <p
+                  className={`text-sm mt-1 ${
+                    mappedResult.success ? 'text-purple-700' : 'text-red-700'
+                  }`}
+                >
+                  Endpoint: <strong>{mappedResult.endpoint.name}</strong>
+                </p>
+                {mappedResult.success && mappedResult.stats && (
+                  <div className="mt-2 space-y-1">
+                    <p className="text-sm text-purple-700">
+                      Campos mapeados: <strong>{mappedResult.stats.totalMappings}</strong>
+                    </p>
+                    <p className="text-sm text-purple-700">
+                      Tipo de resultado: <strong>{mappedResult.stats.resultType}</strong>
+                    </p>
+                    {mappedResult.stats.resultCount !== undefined && (
+                      <p className="text-sm text-purple-700">
+                        Registros retornados: <strong>{mappedResult.stats.resultCount}</strong>
+                      </p>
+                    )}
+                  </div>
+                )}
+                {mappedResult.status && (
+                  <p
+                    className={`text-sm mt-1 ${
+                      mappedResult.success ? 'text-purple-700' : 'text-red-700'
+                    }`}
+                  >
+                    Status: <strong>{mappedResult.status}</strong> - {mappedResult.statusText}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Resposta detalhada */}
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 mb-2">
+                {mappedResult.success ? 'Resposta Filtrada (Mapped):' : 'Detalhes do Erro:'}
+              </h4>
+              <div className="bg-gray-50 rounded-lg p-4 max-h-96 overflow-auto">
+                <pre className="text-xs font-mono text-gray-800 whitespace-pre-wrap">
+                  {JSON.stringify(
+                    mappedResult.success
+                      ? mappedResult.mappedData
+                      : mappedResult.details || mappedResult.error,
+                    null,
+                    2
+                  )}
+                </pre>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-4">
+              <button onClick={handleCloseMappedResultModal} className="btn btn-primary">
                 Fechar
               </button>
             </div>
