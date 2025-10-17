@@ -5,7 +5,6 @@ import api from '../services/api';
 import Modal from '../components/Modal';
 import SearchBar from '../components/SearchBar';
 import ConfirmDialog from '../components/ConfirmDialog';
-import LoadingSpinner from '../components/LoadingSpinner';
 import PathInput from '../components/PathInput';
 import { useStructureValidator } from '../hooks/useStructureValidator';
 
@@ -16,7 +15,6 @@ function FieldMappings() {
   const [endpoint, setEndpoint] = useState(null);
   const [mappings, setMappings] = useState([]);
   const [filteredMappings, setFilteredMappings] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('response');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -57,6 +55,7 @@ function FieldMappings() {
   useEffect(() => {
     fetchEndpoint();
     fetchMappings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [endpointId]);
 
   useEffect(() => {
@@ -126,8 +125,6 @@ function FieldMappings() {
     } catch (error) {
       console.error('Error fetching mappings:', error);
       setMappings([]);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -210,14 +207,6 @@ function FieldMappings() {
     setSelectedMapping(mapping);
     setIsDeleteDialogOpen(true);
   };
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <LoadingSpinner size="lg" />
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">

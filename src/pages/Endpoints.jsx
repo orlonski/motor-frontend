@@ -5,7 +5,6 @@ import api from '../services/api'
 import Modal from '../components/Modal'
 import SearchBar from '../components/SearchBar'
 import ConfirmDialog from '../components/ConfirmDialog'
-import LoadingSpinner from '../components/LoadingSpinner'
 
 const HTTP_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
 const REQUEST_TYPES = ['REST', 'SOAP']
@@ -15,7 +14,6 @@ function Endpoints() {
   const [integration, setIntegration] = useState(null)
   const [endpoints, setEndpoints] = useState([])
   const [filteredEndpoints, setFilteredEndpoints] = useState([])
-  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
@@ -44,6 +42,7 @@ function Endpoints() {
   useEffect(() => {
     fetchIntegration()
     fetchEndpoints()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [integrationId])
 
   useEffect(() => {
@@ -78,8 +77,6 @@ function Endpoints() {
       console.error('Error fetching endpoints:', error)
       setEndpoints([])
       setFilteredEndpoints([])
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -243,14 +240,6 @@ function Endpoints() {
   const canGenerateMapped = (endpoint) => {
     // Precisa ter response_example (testou o endpoint) E ter field_mappings (não verificamos aqui, backend valida)
     return !!(endpoint.responseExample || endpoint.response_example)
-  }
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <LoadingSpinner size="lg" />
-      </div>
-    )
   }
 
   return (

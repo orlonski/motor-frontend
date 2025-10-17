@@ -27,7 +27,8 @@ export function useStructureValidator(endpointId) {
   // Buscar ao montar
   useEffect(() => {
     fetchStructure();
-  }, [fetchStructure]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [endpointId]);
 
   // Validar um caminho
   const validatePath = useCallback(

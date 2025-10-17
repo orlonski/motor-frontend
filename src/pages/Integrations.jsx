@@ -5,12 +5,10 @@ import api from '../services/api'
 import Modal from '../components/Modal'
 import SearchBar from '../components/SearchBar'
 import ConfirmDialog from '../components/ConfirmDialog'
-import LoadingSpinner from '../components/LoadingSpinner'
 
 function Integrations() {
   const [integrations, setIntegrations] = useState([])
   const [filteredIntegrations, setFilteredIntegrations] = useState([])
-  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
@@ -56,8 +54,6 @@ function Integrations() {
       // Em caso de erro, definir arrays vazios
       setIntegrations([])
       setFilteredIntegrations([])
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -107,14 +103,6 @@ function Integrations() {
   const handleOpenDeleteDialog = (integration) => {
     setSelectedIntegration(integration)
     setIsDeleteDialogOpen(true)
-  }
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <LoadingSpinner size="lg" />
-      </div>
-    )
   }
 
   return (
